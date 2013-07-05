@@ -1,5 +1,7 @@
-# The represitory will be about scripts (and maybe in the long run, a single program through which different scripts 
-# can be called) to clean messed up files into files which can be worked with through importing it into MS Excel or MS 
-# Access (or any other relevant software). The code is a bit messy right now and probably not optimised since I'm not
-# so experienced in the code yet. That said, I'm open to suggestions for optimising the code and learning about new ways
-# of doing the same thing, better and faster :)
+# The represitory will be about scripts (and maybe in the long run, a single program
+# through which different scripts can be called) to clean messed up files into files
+# which can be worked with through importing it into MS Excel or MS Access (or any
+# other relevant software). The code is a bit messy right now and probably not
+# optimised since I'm not so experienced in the code yet. That said, I'm open to
+# suggestions for optimising the code and learning about new ways of doing the same
+# thing, better and faster :)
