@@ -20,11 +20,11 @@ entry $f.ent -width 20 -textvariable fname
 pack $f.ent -side left -expand yes -fill x
 
 # create and place buttons in widget (combination of above steps)
-pack [button $f.c -text "Start" -command "clean \$fname"] -side right
-pack [button $f.b -text "Browse" -command "fileDialog $f.ent"] -side right
+pack [ttk::button $f.c -text "Start" -command "clean \$fname"] -side right
+pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side right
 
 # create close button
-pack [button .q -text "Close" -command {exit}] -side bottom
+pack [ttk::button .q -text "Close" -command {exit}] -side bottom
 
 # proc to open file dialog box and fill in entry box for file path/name
 proc fileDialog {ent} {
