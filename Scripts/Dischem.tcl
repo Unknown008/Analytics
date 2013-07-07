@@ -12,23 +12,23 @@ set entries 1
 
 # Create frame within widget, add label and set position of frame
 set f [frame .fr]
-label $f.lab -text "Browse for the file to cleanse: "
-pack $f.lab -side left
 pack $f -fill x -padx 1c -pady 3
+label $f.lab -text "Browse for the file to cleanse: "
+pack $f.lab -side left -anchor w
 
 # create input box named ".ent"
 entry $f.ent -width 20 -textvariable fname
 
 # place input box in widget
-pack $f.ent -side left -expand yes -fill x
+pack $f.ent -side left -expand yes -fill x -anchor w
 
 # create and place buttons in widget (combination of above steps)
-pack [ttk::button $f.c -text "Start" -command "clean \$fname"] -side right
-pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side right 
+pack [ttk::button $f.c -text "Start" -command "clean \$fname"] -side right -anchor w
+pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side right -anchor w
 
 # create close button
-pack [ttk::button .m -text "More files..." -command "addNewEntries"] -side left -padx 2
-pack [ttk::button .q -text "Close" -command {exit}] -side bottom
+pack [ttk::button .q -text "Close" -command {exit}] -side right
+pack [ttk::button .m -text "More files..." -command "addNewEntries"] -side right
 
 # proc to open file dialog box and fill in entry box for file path/name
 proc fileDialog {ent} {
@@ -156,14 +156,16 @@ proc clean {file} {
 }
 
 proc addNewEntries {} {
-	global entries f
+	global entries
 	if {$entries > 4} {
 		showMessageBox 4
 		return
 	}
-	pack [label $f.lab$entries -text "Browse for the file to cleanse: "] -side bottom -pady 2
-	pack [entry $f.ent$entries -width 20 -textvariable "fname$entries"] -side left -expand yes -fill x -pady 2
-	pack [ttk::button $f.c$entries -text "Start" -command "clean \$fname$entries"] -side right -pady 2
-	pack [ttk::button $f.b$entries -text "Browse" -command "fileDialog $f.ent$entries"] -side right -pady 2
+	set f [frame ".f$entries"]
+	pack $f -fill x -padx 1c -pady 3
+	pack [label $f.lab -text "Browse for the file to cleanse: "] -side left -pady 5
+	pack [entry $f.ent -width 20 -textvariable "fname$entries"] -side left -expand yes -fill x -pady 5
+	pack [ttk::button $f.c -text "Start" -command "clean \$fname$entries"] -side left -pady 5
+	pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent$entries"] -side left -pady 5
 	incr entries
 }
