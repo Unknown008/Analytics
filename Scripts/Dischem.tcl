@@ -2,7 +2,7 @@
 wm title . "Dischem cleansing"
 
 # create label of widget named ".msg"
-label .msg -wraplength 4i -justify left -text "Click on \"Browse\" to select a file name using the file selection dialog for cleansing." -anchor e
+label .msg -justify left -text "Click on \"Browse\" to select a file name using the file selection dialog for cleansing." -anchor e
 
 # put label in widget
 pack .msg -side top
@@ -10,22 +10,20 @@ pack .msg -side top
 # Create frame within widget, add label and set position of frame
 set f [frame .fr0]
 pack $f -fill x -padx 1c -pady 3
-label $f.lab -text "Browse for the file to cleanse: "
-pack $f.lab -side left -anchor w -padx 1
+pack [label $f.lab -text "Browse for the file to cleanse:"] -side left -anchor w -padx 1
 
 # Number of entries. Default 1. Frame list
 set entries 1
 set frames [list $f]
-
-# create input box named ".ent"
-entry $f.ent -width 20 -textvariable fname
+set fentries [list]
 
 # place input box in widget
-pack $f.ent -side left -expand yes -fill x -anchor w -padx 1
+pack [entry $f.ent -width 20 -textvariable fname] -side left -expand yes -fill x -anchor w -padx 2
 
 # create and place buttons in widget (combination of above steps)
-pack [ttk::button $f.c -text "Start" -command "clean \$fname 1"] -side left -anchor w -padx 1
-pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -anchor w -padx 1
+pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -anchor w -padx 2 -pady 5
+pack [ttk::button $f.c -text "Start" -command "clean \$fname 1"] -side left -anchor w -padx 2 -pady 5
+
 
 # create close button
 set g [frame .g]
@@ -36,6 +34,7 @@ pack [ttk::button $g.all -text "Clean all" -command "cleanAll"] -side right -anc
 
 # proc to open file dialog box and fill in entry box for file path/name
 proc fileDialog {ent} {
+	global fentries
 	# main file types we'll use
 	set types {
 		{"Text files"		.txt}
@@ -52,6 +51,7 @@ proc fileDialog {ent} {
 	
 	# file dialog command
 	set file [tk_getOpenFile -filetypes $types -typevariable selected_type]
+	lappend fentries $file
 	
 	# enter file path into entry box. Don't understand this one completely yet
 	if {[string compare $file ""]} {
@@ -110,7 +110,6 @@ proc clean {file mode} {
 	
 	# open read and write files and debug file
 	set data [open $file r]
-	set debug [open "debug.txt" w]
 	set newfilename "$filename cleansed"
 	set output [open "$newfilename.txt" w]
 	
@@ -155,7 +154,6 @@ proc clean {file mode} {
 		incr count
 	}
 	close $output
-	close $debug
 	close $data
 	if {$mode} {showMessageBox 1}
 }
@@ -168,18 +166,19 @@ proc addNewEntries {} {
 	}
 	set f [frame ".fr$entries"]
 	pack $f -fill x -padx 1c -pady 2
-	pack [label $f.lab -text "Browse for the file to cleanse: "] -side left -padx 1 -pady 5
-	pack [entry $f.ent -width 20 -textvariable "fname$entries"] -side left -expand yes -fill x -padx 1 -pady 5
-	pack [ttk::button $f.c -text "Start" -command "clean \$fname$entries 1"] -side left -padx 1 -pady 5
-	pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -padx 1 -pady 5
+	pack [label $f.lab -text "Browse for the file to cleanse:"] -side left -padx 1 -pady 5
+	pack [entry $f.ent -width 20 -textvariable "fname$entries"] -side left -expand yes -fill x -padx 2 -pady 5
+	pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -padx 2 -pady 5
+	pack [ttk::button $f.c -text "Start" -command "clean \$fname$entries 1"] -side right -padx 2 -pady 5
+
 	incr entries
 	lappend $frames $f
 }
 
 proc cleanAll {} {
-	global frames entries
-	for {set i 0} {$i <= $entries} {incr i} {
-		if {$f.ent = ""} {continue}
-		clean "\$fname$i 0"
+	global fentries
+	foreach i $fentries {
+		clean $i 0
 	}
+	showMessageBox 1
 }
