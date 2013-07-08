@@ -7,14 +7,15 @@ label .msg -wraplength 4i -justify left -text "Click on \"Browse\" to select a f
 # put label in widget
 pack .msg -side top
 
-# Number of entries. Default 1
-set entries 1
-
 # Create frame within widget, add label and set position of frame
-set f [frame .fr]
+set f [frame .fr0]
 pack $f -fill x -padx 1c -pady 3
 label $f.lab -text "Browse for the file to cleanse: "
 pack $f.lab -side left -anchor w -padx 1
+
+# Number of entries. Default 1. Frame list
+set entries 1
+set frames [list $f]
 
 # create input box named ".ent"
 entry $f.ent -width 20 -textvariable fname
@@ -23,7 +24,7 @@ entry $f.ent -width 20 -textvariable fname
 pack $f.ent -side left -expand yes -fill x -anchor w -padx 1
 
 # create and place buttons in widget (combination of above steps)
-pack [ttk::button $f.c -text "Start" -command "clean \$fname"] -side left -anchor w -padx 1
+pack [ttk::button $f.c -text "Start" -command "clean \$fname 1"] -side left -anchor w -padx 1
 pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -anchor w -padx 1
 
 # create close button
@@ -31,6 +32,7 @@ set g [frame .g]
 pack $g -fill x -side bottom -anchor s
 pack [ttk::button $g.exit -text "Close" -command {exit}] -side right -anchor s
 pack [ttk::button $g.more -text "More files..." -command "addNewEntries"] -side right -anchor s
+pack [ttk::button $g.all -text "Clean all" -command "cleanAll"] -side right -anchor s
 
 # proc to open file dialog box and fill in entry box for file path/name
 proc fileDialog {ent} {
@@ -84,18 +86,19 @@ proc showMessageBox {level} {
 		2 {set button [tk_messageBox -title Warning -message "No file was selected!"]}
 		3 {set button [tk_messageBox -title Warning -message "File name invalid!"]}
 		4 {set button [tk_messageBox -title Warning -message "Cannot add more files!"]}
+		5 {set button [tk_messageBox -title Bug -message "All right here..."]}
 		default {}
 	}
 }
 
 # core proc to clean file. Pretty messy atm
-proc clean {file} {
+proc clean {file mode} {
+	global frames
 	# check for empty emtry box
 	if {$file eq ""} {
 		showMessageBox 2
 		return
 	}
-	
 	# check for valid file
 	if {[catch {open $file r} fid]} {
 		showMessageBox 3
@@ -154,20 +157,29 @@ proc clean {file} {
 	close $output
 	close $debug
 	close $data
-	showMessageBox 1
+	if {$mode} {showMessageBox 1}
 }
 
 proc addNewEntries {} {
-	global entries
+	global entries frames
 	if {$entries > 4} {
 		showMessageBox 4
 		return
 	}
-	set f [frame ".f$entries"]
+	set f [frame ".fr$entries"]
 	pack $f -fill x -padx 1c -pady 2
 	pack [label $f.lab -text "Browse for the file to cleanse: "] -side left -padx 1 -pady 5
 	pack [entry $f.ent -width 20 -textvariable "fname$entries"] -side left -expand yes -fill x -padx 1 -pady 5
-	pack [ttk::button $f.c -text "Start" -command "clean \$fname$entries"] -side left -padx 1 -pady 5
-	pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent$entries"] -side left -padx 1 -pady 5
+	pack [ttk::button $f.c -text "Start" -command "clean \$fname$entries 1"] -side left -padx 1 -pady 5
+	pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -padx 1 -pady 5
 	incr entries
+	lappend $frames $f
+}
+
+proc cleanAll {} {
+	global frames entries
+	for {set i 0} {$i <= $entries} {incr i} {
+		if {$f.ent = ""} {continue}
+		clean "\$fname$i 0"
+	}
 }
