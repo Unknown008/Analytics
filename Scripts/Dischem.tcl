@@ -51,10 +51,16 @@ proc fileDialog {ent} {
 	
 	# file dialog command
 	set file [tk_getOpenFile -filetypes $types -typevariable selected_type]
-	lappend fentries $file
 	
 	# enter file path into entry box. Don't understand this one completely yet
 	if {[string compare $file ""]} {
+		if {[$ent select range 0 end] != ""} {
+			set oldfile [$ent select range 0 end]
+			set id [lsearch $fentries $oldfile]
+			set fentries [lreplace $fentries $id $id $file]
+		} else {
+			lappend $fentries $file
+		}
 		$ent delete 0 end
 		$ent insert 0 $file
 		$ent xview end
@@ -177,8 +183,18 @@ proc addNewEntries {} {
 
 proc cleanAll {} {
 	global fentries
+	set errors [list "One or more files failed to be cleansed:"]
 	foreach i $fentries {
-		clean $i 0
+		if {![catch {clean $i 0} fid]} {
+			clean $i 0
+		} else {
+			lappend $errors "- $i could not be cleaned because $fid."
+			set button [tk_messageBox -title Warning -message "Passed"]
+		}
 	}
-	showMessageBox 1
+	if {[llength $errors] == 1} {
+		showMessageBox 1
+	} else {
+		set button [tk_messageBox -title Warning -message [join $errors "\n"]]
+	}
 }
