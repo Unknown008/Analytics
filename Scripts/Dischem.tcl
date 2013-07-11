@@ -14,8 +14,7 @@ pack [label $f.lab -text "Browse for the file to cleanse:"] -side left -anchor w
 
 # Number of entries. Default 1. Frame list
 set entries 1
-set frames [list $f]
-set fentries [list]
+set fentries ""
 
 # place input box in widget
 pack [entry $f.ent -width 20 -textvariable fname] -side left -expand yes -fill x -anchor w -padx 2
@@ -59,7 +58,7 @@ proc fileDialog {ent} {
 			set id [lsearch $fentries $oldfile]
 			set fentries [lreplace $fentries $id $id $file]
 		} else {
-			lappend $fentries $file
+			lappend fentries $file
 		}
 		$ent delete 0 end
 		$ent insert 0 $file
@@ -86,7 +85,6 @@ proc amount {group id} {
 
 # message box alerts
 proc showMessageBox {level} {
-	global msgboxIcon msgboxType
 	switch $level {
 		1 {set button [tk_messageBox -title Complete -message "Operation complete!"]}
 		2 {set button [tk_messageBox -title Warning -message "No file was selected!"]}
@@ -165,7 +163,7 @@ proc clean {file mode} {
 }
 
 proc addNewEntries {} {
-	global entries frames
+	global entries
 	if {$entries > 4} {
 		showMessageBox 4
 		return
@@ -178,7 +176,6 @@ proc addNewEntries {} {
 	pack [ttk::button $f.c -text "Start" -command "clean \$fname$entries 1"] -side right -padx 2 -pady 5
 
 	incr entries
-	lappend $frames $f
 }
 
 proc cleanAll {} {
@@ -188,8 +185,7 @@ proc cleanAll {} {
 		if {![catch {clean $i 0} fid]} {
 			clean $i 0
 		} else {
-			lappend $errors "- $i could not be cleaned because $fid."
-			set button [tk_messageBox -title Warning -message "Passed"]
+			lappend errors "- $i could not be cleaned because $fid."
 		}
 	}
 	if {[llength $errors] == 1} {
