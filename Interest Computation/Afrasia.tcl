@@ -143,60 +143,130 @@ proc clean {file mode} {
 	if {$mode} {showMessageBox 1}
 }
 
+proc bemonth {id} {
+	switch $id {
+		0 {set eom "30/06/2012"}
+		1 {set eom "31/07/2012"}
+		2 {set eom "31/08/2012"}
+		3 {set eom "30/09/2012"}
+		4 {set eom "31/10/2012"}
+		5 {set eom "30/11/2012"}
+		6 {set eom "31/12/2012"}
+		7 {set eom "31/01/2013"}
+		8 {set eom "28/02/2013"}
+		9 {set eom "31/03/2013"}
+		10 {set eom "30/04/2013"}
+		11 {set eom "31/05/2013"}
+		12 {set eom "30/06/2013"}
+	}
+	return $eom
+}
+
 proc monthly_AM {group} {
 	lassign $group ref bkdate customer curr type origamt balfcy freq rate1 rate2 rate3 rate4 rate5 rate6 rate7 rate8 rate9 rate10 rate11 rate12 matdate
 	set months [lrange $group 8 19]
 	
+	set debug [open "debug.txt" w]
+	
+	set startdate [clock scan {30/06/2012} -format %d/%m/%Y]
+	if {$curr eq "EUR" || $curr eq "USD" || $curr eq "GBP"} {
+		set yeardays 360.0
+	} else {
+		set yeardays 365.0
+	}
+	
+	##################################################################
+	# Don't change anything below unless you know what you are doing #
+	##################################################################
 	if {[regexp {^\s*-?\s*$} $balfcy]} {set balfcy $origamt}
 	set count 0
 	set netint 0
 	regsub -all {[, ]} $balfcy "" balfcy
-	set pmt 0
 	set month 1
-	set quarter 0
-		
+	set interest_listing ""
+	set index 0
+	set skip 0
+	set offsetpmt 0
+	
+	switch freq {
+		"M" {set period 1}
+		"Q" {set period 3}
+		"Y" {set period 12}
+		"H" {set period 6}
+		default {set period 1}
+	}
+	
 	foreach int $months {
-		if {$int == "" || $month <= 0} {continue}
-		if {$quarter % 3 != 0} {
-			if {$quarter == 0} {
-				switch $count {
-					0 {set startdate "31/07/2012"}
-					1 {set startdate "31/08/2012"}
-					2 {set startdate "30/09/2012"}
-					3 {set startdate "31/10/2012"}
-					4 {set startdate "30/11/2012"}
-					5 {set startdate "31/12/2012"}
-					6 {set startdate "31/01/2013"}
-					7 {set startdate "28/02/2013"}
-					8 {set startdate "31/03/2013"}
-					9 {set startdate "30/04/2013"}
-					10 {set startdate "31/05/2013"}
-					11 {set startdate "30/06/2013"}
-				}
-			
-			
-			}
-			incr quarter
-			continue
-		}
-		set matdate1 [clock scan $matdate -format %d/%m/%Y]
-		if {[clock scan $bkdate -format %d/%m/%Y] < [clock scan {30/06/2012} -format %d/%m/%Y]} {
-			set bkdate1 [clock scan {30/06/2012} -format %d/%m/%Y]
+		# Check if blank
+		incr index
+		if {$int == "" || $month <= 0 || $month % $period != 0} {continue}
+	
+		# Check whether started before year
+		if {[clock scan $bkdate -format %d/%m/%Y] < $startdate} {
+			set bkdate1 $startdate
 		} else {
 			set bkdate1 [clock scan $bkdate -format %d/%m/%Y]
 		}
-		set month [expr {round((($matdate1-$bkdate1)/2628000.0))-$count}]
-		if {$month == 0} {set month 1}
-		set rate [expr {$int/1200.0}]
-		set pmt [expr {($rate+($rate/((1.0+$rate)**$month-1.0)))*$balfcy}]
+
+		set eom [bemonth $index]
+		set eom [clock scan $eom -format %d/%m/%Y]
+		
+		# Find offset
+		set bom [bemonth [expr {$index-$period}]]
+		set bom [clock scan $bom -format %d/%m/%Y]
+		if {$bkdate1 > $bom} {
+			# 86400.0 is the number of seconds in a day.
+			set chrgdays [expr {(($eom-$bkdate1)/86400.0)+1}]
+			set skip 1
+		} else {
+			set chrgdays [expr {($eom-$bom)/86400.0}]
+		}
+		
+		if {$index == 12 && [lindex $months 10] != ""} {
+			set matdate1 [clock scan $matdate -format %d/%m/%Y]
+			# 2628000.0 is the number of seconds in a month.
+			set periods [expr {int((($matdate1-$bkdate1)/(2628000.0/$period)))-$count}]
+			if {$periods == 0} {set periods 1}
+			set pmt [expr {($rate+($rate/((1.0+$rate)**$periods-1.0)))*$balfcy}]
+			set prevint [lindex $months 10]
+			set rate1 [expr {($prevint/100.0)*((21)/$yeardays)}]
+			set rate2 [expr {($int/100.0)*((9)/$yeardays)}]
+			set interest [expr {($balfcy*$rate1)+($balfcy*$rate2)}]
+			set balfcy [expr {$balfcy+$interest-$pmt}]
+			set netint [expr {$netint+$interest}]
+			puts $debug "$ref\t$periods\t$interest\t$pmt\t$balfcy"
+			break
+		}
+		
+		# Find rate
+		set rate [expr {($int/100.0)*(($chrgdays)/$yeardays)}]
 		set interest [expr {$balfcy*$rate}]
+		set rate [expr {($int/100.0)/(12.0/$period)}]
+		if {$skip} {
+			# Account interest for partial month at beginning
+			set netint $interest
+			puts $debug "Interest: $interest"
+			set offsetpmt $interest
+			set skip 0
+			continue
+		}
+
+		set matdate1 [clock scan $matdate -format %d/%m/%Y]
+		set periods [expr {int((($matdate1-$bkdate1)/(2628000.0/$period)))-$count}]
+		if {$periods == 0} {set periods 1}
+		set pmt [expr {(($rate+($rate/((1.0+$rate)**$periods-1.0)))*$balfcy)}]
+		set pmt [expr {$pmt+$offsetpmt}]
 		set netint [expr {$netint+$interest}]
 		set balfcy [expr {$balfcy+$interest-$pmt}]
+		puts $debug "$ref\t$periods\t$interest\t$pmt\t$balfcy"
+		set offsetpmt 0
+		set pmt 0
 		incr count
-		if {$freq == "Q"} {incr quarter}
 	}
+
 	lappend group $netint $balfcy
 	return [join $group "\t"]
+	close $debug
 }
 
 proc monthly_NO {group} {
