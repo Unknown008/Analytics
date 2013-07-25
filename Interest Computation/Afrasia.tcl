@@ -167,6 +167,8 @@ proc monthly_AM {group} {
 	set months [lrange $group 8 19]
 	
 	set debug [open "debug.txt" w]
+	close $debug
+	set debug [open "debug.txt" a]
 	
 	set startdate [clock scan {30/06/2012} -format %d/%m/%Y]
 	if {$curr eq "EUR" || $curr eq "USD" || $curr eq "GBP"} {
@@ -182,24 +184,26 @@ proc monthly_AM {group} {
 	set count 0
 	set netint 0
 	regsub -all {[, ]} $balfcy "" balfcy
-	set month 1
+	set periods 1
 	set interest_listing ""
 	set index 0
 	set skip 0
 	set offsetpmt 0
+	set remain 0
+	set cumint 0
 	
-	switch freq {
+	switch [string trim $freq] {
 		"M" {set period 1}
 		"Q" {set period 3}
 		"Y" {set period 12}
 		"H" {set period 6}
 		default {set period 1}
 	}
-	
+
 	foreach int $months {
 		# Check if blank
 		incr index
-		if {$int == "" || $month <= 0 || $month % $period != 0} {continue}
+		if {$int == "" || $periods <= 0} {continue}
 	
 		# Check whether started before year
 		if {[clock scan $bkdate -format %d/%m/%Y] < $startdate} {
@@ -212,11 +216,12 @@ proc monthly_AM {group} {
 		set eom [clock scan $eom -format %d/%m/%Y]
 		
 		# Find offset
-		set bom [bemonth [expr {$index-$period}]]
+		set bom [bemonth [expr {$index-1}]]
 		set bom [clock scan $bom -format %d/%m/%Y]
 		if {$bkdate1 > $bom} {
 			# 86400.0 is the number of seconds in a day.
 			set chrgdays [expr {(($eom-$bkdate1)/86400.0)+1}]
+			# This bit is to prevent reuse of bookdate
 			set skip 1
 		} else {
 			set chrgdays [expr {($eom-$bom)/86400.0}]
@@ -225,43 +230,49 @@ proc monthly_AM {group} {
 		if {$index == 12 && [lindex $months 10] != ""} {
 			set matdate1 [clock scan $matdate -format %d/%m/%Y]
 			# 2628000.0 is the number of seconds in a month.
-			set periods [expr {int((($matdate1-$bkdate1)/(2628000.0/$period)))-$count}]
+			set periods [expr {int((($matdate1-$bkdate1)/(2628000.0*$period)))-$remain}]
+			incr count
 			if {$periods == 0} {set periods 1}
 			set pmt [expr {($rate+($rate/((1.0+$rate)**$periods-1.0)))*$balfcy}]
 			set prevint [lindex $months 10]
-			set rate1 [expr {($prevint/100.0)*((21)/$yeardays)}]
-			set rate2 [expr {($int/100.0)*((9)/$yeardays)}]
+			set rate1 [expr {($prevint/100.0)*(21/$yeardays)}]
+			set rate2 [expr {($int/100.0)*(9/$yeardays)}]
 			set interest [expr {($balfcy*$rate1)+($balfcy*$rate2)}]
-			set balfcy [expr {$balfcy+$interest-$pmt}]
-			set netint [expr {$netint+$interest}]
-			puts $debug "$ref\t$periods\t$interest\t$pmt\t$balfcy"
+			if {$count % $period == 0} {
+				set balfcy [expr {$balfcy+$interest-$pmt}]
+				set netint [expr {$netint+$interest}]
+			}
 			break
 		}
 		
 		# Find rate
-		set rate [expr {($int/100.0)*(($chrgdays)/$yeardays)}]
+		set rate [expr {($int/100.0)*($chrgdays/$yeardays)}]
 		set interest [expr {$balfcy*$rate}]
 		set rate [expr {($int/100.0)/(12.0/$period)}]
 		if {$skip} {
 			# Account interest for partial month at beginning
 			set netint $interest
-			puts $debug "Interest: $interest"
 			set offsetpmt $interest
 			set skip 0
 			continue
 		}
 
 		set matdate1 [clock scan $matdate -format %d/%m/%Y]
-		set periods [expr {int((($matdate1-$bkdate1)/(2628000.0/$period)))-$count}]
+		set periods [expr {int((($matdate1-$bkdate1)/(2628000.0*$period)))-$remain}]
+		if {$periods < 0} {break}
+		incr count
 		if {$periods == 0} {set periods 1}
 		set pmt [expr {(($rate+($rate/((1.0+$rate)**$periods-1.0)))*$balfcy)}]
 		set pmt [expr {$pmt+$offsetpmt}]
 		set netint [expr {$netint+$interest}]
-		set balfcy [expr {$balfcy+$interest-$pmt}]
-		puts $debug "$ref\t$periods\t$interest\t$pmt\t$balfcy"
-		set offsetpmt 0
+		set cumint [expr {$cumint+$interest}]
+		if {$count % $period == 0} {
+			set balfcy [expr {$balfcy+$cumint-$pmt}]
+			set cumint 0
+			set offsetpmt 0
+			incr remain
+		}
 		set pmt 0
-		incr count
 	}
 
 	lappend group $netint $balfcy
