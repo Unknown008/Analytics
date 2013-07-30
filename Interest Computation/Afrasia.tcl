@@ -221,7 +221,6 @@ proc monthly_AM {group} {
 		if {$bkdate1 > $bom} {
 			# 86400.0 is the number of seconds in a day.
 			set chrgdays [expr {(($eom-$bkdate1)/86400.0)+1}]
-			# This bit is to prevent reuse of bookdate
 			set skip 1
 		} else {
 			set chrgdays [expr {($eom-$bom)/86400.0}]
