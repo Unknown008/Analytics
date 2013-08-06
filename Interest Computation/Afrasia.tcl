@@ -110,7 +110,7 @@ proc clean {file mode} {
 	}
 	
 	# extract file name from path
-	regexp {.*\/([\w\s]+)\.txt} $file - filename
+	regexp {.*\/([\w\s]+)\.\w+$} $file - filename
 	
 	# open read and write files and debug file
 	set data [open $file r]
