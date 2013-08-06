@@ -51,7 +51,7 @@ proc fileDialog {ent} {
 	# file dialog command
 	set file [tk_getOpenFile -filetypes $types -typevariable selected_type]
 	
-	# enter file path into entry box. Don't understand this one completely yet
+	# Enter file path into entry box after file has been browsed. Change the file when another file is browsed.
 	if {[string compare $file ""]} {
 		if {[$ent select range 0 end] != ""} {
 			set oldfile [$ent select range 0 end]
@@ -64,23 +64,6 @@ proc fileDialog {ent} {
 		$ent insert 0 $file
 		$ent xview end
 	}
-	
-	#creates an error without this one earlier on. Not sure if still applicable. To test
-	unset file
-}
-
-# general proc to convert dd.mm.yyyy to dd/mm/yyyy
-proc dates {group id} {
-	set group [lreplace $group $id $id [regsub -all {\.} [lindex $group $id] "/"]]
-	return $group
-}
-
-# general proc to convert ###.###.###,## to ###,###,###.## and apply debit/credit indicator
-proc amount {group id} {
-	set value [regsub {,} [regsub -all {\.} [lindex $group $id] ""] "."]
-	set sign [lindex $group 17]
-	if {$sign eq "H" || $sign eq "C" || $sign eq "Cr"} {set value "-$value"}
-	return [linsert $group [incr id] $value]
 }
 
 # message box alerts
@@ -143,6 +126,7 @@ proc clean {file mode} {
 	if {$mode} {showMessageBox 1}
 }
 
+# Hard coded part for financial year of Afrasia. Might need to find more elegant way to generate end of months
 proc bemonth {id} {
 	switch $id {
 		0 {set eom "30/06/2012"}
@@ -163,14 +147,14 @@ proc bemonth {id} {
 }
 
 proc monthly_AM {group} {
+	# structure of file input
 	lassign $group ref bkdate customer curr type origamt balfcy freq rate1 rate2 rate3 rate4 rate5 rate6 rate7 rate8 rate9 rate10 rate11 rate12 matdate
 	set months [lrange $group 8 19]
 	
-	set debug [open "debug.txt" w]
-	close $debug
-	set debug [open "debug.txt" a]
-	
+	# Beginning of financial year date
 	set startdate [clock scan {30/06/2012} -format %d/%m/%Y]
+	
+	# Different currencies, different days-in-a-year basis to calculate interest
 	if {$curr eq "EUR" || $curr eq "USD" || $curr eq "GBP"} {
 		set yeardays 360.0
 	} else {
@@ -181,28 +165,27 @@ proc monthly_AM {group} {
 	# Don't change anything below unless you know what you are doing #
 	##################################################################
 	if {[regexp {^\s*-?\s*$} $balfcy]} {set balfcy $origamt}
-	set count 0
-	set netint 0
-	regsub -all {[, ]} $balfcy "" balfcy
-	set periods 1
-	set interest_listing ""
-	set index 0
-	set skip 0
-	set offsetpmt 0
-	set remain 0
-	set cumint 0
+	set count 0                           # Basis to assess whether payment is to be issued or not
+	set netint 0                          # To store total interest accrued during year
+	regsub -all {[, ]} $balfcy "" balfcy  # Remove commas from amount and spaces if any from opening balance on loan
+	set periods 1                         # Number of periods to maturity. Used to end calculation if matured within year
+	set index 0                           # Basis for elements of list of rates
+	set skip 0                            # Used for instances where loan not taken on 1st day of month
+	set offsetpmt 0                       # With instances of `$skip`, accrue insterest for days to periodic payments
+	set remain 0                          # Used in calculating periodic payment and periods left to maturity
+	set cumint 0                          # Interest accrued before payment issued for each period
 	
 	switch [string trim $freq] {
-		"M" {set period 1}
-		"Q" {set period 3}
-		"Y" {set period 12}
-		"H" {set period 6}
+		"M" {set period 1}       # Monthly installments
+		"Q" {set period 3}       # Quarterly installments
+		"Y" {set period 12}      # Yearly installments
+		"H" {set period 6}       # Half-yearly installments
 		default {set period 1}
 	}
 
 	foreach int $months {
-		# Check if blank
 		incr index
+		# Check if blank or no more payment to be done (i.e maturity date reached)
 		if {$int == "" || $periods <= 0} {continue}
 	
 		# Check whether started before year
@@ -211,11 +194,12 @@ proc monthly_AM {group} {
 		} else {
 			set bkdate1 [clock scan $bkdate -format %d/%m/%Y]
 		}
-
+		
+		# Get last day of month for current month
 		set eom [bemonth $index]
 		set eom [clock scan $eom -format %d/%m/%Y]
 		
-		# Find offset
+		# Find offset with first day of month
 		set bom [bemonth [expr {$index-1}]]
 		set bom [clock scan $bom -format %d/%m/%Y]
 		if {$bkdate1 > $bom} {
@@ -232,6 +216,7 @@ proc monthly_AM {group} {
 			set periods [expr {int((($matdate1-$bkdate1)/(2628000.0*$period)))-$remain}]
 			incr count
 			if {$periods == 0} {set periods 1}
+			# Payment formula for period ending
 			set pmt [expr {($rate+($rate/((1.0+$rate)**$periods-1.0)))*$balfcy}]
 			set prevint [lindex $months 10]
 			set rate1 [expr {($prevint/100.0)*(21/$yeardays)}]
@@ -276,38 +261,40 @@ proc monthly_AM {group} {
 
 	lappend group $netint $balfcy
 	return [join $group "\t"]
-	close $debug
 }
 
-proc monthly_NO {group} {
-	lassign $group ref bkdate customer curr type origamt balfcy freq rate1 rate2 rate3 rate4 rate5 rate6 rate7 rate8 rate9 rate10 rate11 rate12 matdate
-	set months [lrange $group 8 19]
-	
-	if {[regexp {^\s*-?\s*$} $balfcy]} {set balfcy $origamt}
-	set count 0
-	set netint 0
-	regsub -all {[, ]} $balfcy "" balfcy
-	set pmt 0
-	set month 1
-	set quarter 0
+# No payment loans removed from scope...
+if {0} {
+	proc monthly_NO {group} {
+		lassign $group ref bkdate customer curr type origamt balfcy freq rate1 rate2 rate3 rate4 rate5 rate6 rate7 rate8 rate9 rate10 rate11 rate12 matdate
+		set months [lrange $group 8 19]
 		
-	foreach int $months {
-		if {$int == "" || $month <= 0} {continue}
-		set matdate1 [clock scan $matdate -format %d/%m/%Y]
-		if {[clock scan $bkdate -format %d/%m/%Y] < [clock scan {30/06/2012} -format %d/%m/%Y]} {
-			set bkdate1 [clock scan {30/06/2012} -format %d/%m/%Y]
-		} else {
-			set bkdate1 [clock scan $bkdate -format %d/%m/%Y]
+		if {[regexp {^\s*-?\s*$} $balfcy]} {set balfcy $origamt}
+		set count 0
+		set netint 0
+		regsub -all {[, ]} $balfcy "" balfcy
+		set pmt 0
+		set month 1
+		set quarter 0
+			
+		foreach int $months {
+			if {$int == "" || $month <= 0} {continue}
+			set matdate1 [clock scan $matdate -format %d/%m/%Y]
+			if {[clock scan $bkdate -format %d/%m/%Y] < [clock scan {30/06/2012} -format %d/%m/%Y]} {
+				set bkdate1 [clock scan {30/06/2012} -format %d/%m/%Y]
+			} else {
+				set bkdate1 [clock scan $bkdate -format %d/%m/%Y]
+			}
+			set month [expr {round((($matdate1-$bkdate1)/2628000.0))-$count}]
+			if {$month == 0} {set month 1}
+			set rate [expr {$int/1200.0}]
+			set interest [expr {$balfcy*$rate}]
+			set netint [expr {$netint+$interest}]
+			incr count
 		}
-		set month [expr {round((($matdate1-$bkdate1)/2628000.0))-$count}]
-		if {$month == 0} {set month 1}
-		set rate [expr {$int/1200.0}]
-		set interest [expr {$balfcy*$rate}]
-		set netint [expr {$netint+$interest}]
-		incr count
+		lappend group $netint $balfcy
+		return [join $group "\t"]
 	}
-	lappend group $netint $balfcy
-	return [join $group "\t"]
 }
 
 proc addNewEntries {} {
