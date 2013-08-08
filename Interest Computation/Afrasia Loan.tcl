@@ -165,24 +165,15 @@ proc monthly_AM {group} {
 	# Don't change anything below unless you know what you are doing #
 	##################################################################
 	if {[regexp {^\s*-?\s*$} $balfcy]} {set balfcy $origamt}
-	# Basis to assess whether payment is to be issued or not
-	set count 0                           
-	# To store total interest accrued during year
-	set netint 0                          
-	# Remove commas from amount and spaces if any from opening balance on loan
-	regsub -all {[, ]} $balfcy "" balfcy  
-	# Number of periods to maturity. Used to end calculation if matured within year
-	set periods 1                         
-	# Basis for elements of list of rates
-	set index 0                           
-	# Used for instances where loan not taken on 1st day of month
-	set skip 0                            
-	# With instances of `$skip`, accrue insterest for days to periodic payments
-	set offsetpmt 0                       
-	# Used in calculating periodic payment and periods left to maturity
-	set remain 0                          
-	# Interest accrued before payment issued for each period
-	set cumint 0                          
+	set count 0                           ;# Basis to assess whether payment is to be issued or not
+	set netint 0                          ;# To store total interest accrued during year
+	regsub -all {[, ]} $balfcy "" balfcy  ;# Remove commas from amount and spaces if any from opening balance on loan
+	set periods 1                         ;# Number of periods to maturity. Used to end calculation if matured within year
+	set index 0                           ;# Basis for elements of list of rates
+	set skip 0                            ;# Used for instances where loan not taken on 1st day of month
+	set offsetpmt 0                       ;# With instances of `$skip`, accrue insterest for days to periodic payments
+	set remain 0                          ;# Used in calculating periodic payment and periods left to maturity
+	set cumint 0                          ;# Interest accrued before payment issued for each period
 	
 	switch [string trim $freq] {
 		"M" {set period 1}       # Monthly installments
