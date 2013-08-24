@@ -33,3 +33,4 @@ close $data2
 close $data3
 close $data4
 close $data5
+close $output

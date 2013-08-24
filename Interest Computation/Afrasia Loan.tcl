@@ -81,7 +81,7 @@ proc showMessageBox {level} {
 # core proc to clean file. Pretty messy atm
 proc clean {file mode} {
 	global frames
-	# check for empty emtry box
+	# check for empty entry box
 	if {$file eq ""} {
 		showMessageBox 2
 		return
