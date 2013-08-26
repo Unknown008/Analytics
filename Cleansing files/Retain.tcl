@@ -2,32 +2,28 @@
 wm title . "Retain"
 
 # create label of widget named ".msg" and put in widget
-lpack [abel .msg -justify left -text "Select the two files to be cleansed" -anchor e] -side top
+pack [label .msg -justify left -text "Select the two files to be cleansed" -anchor e] -side top
 
 # Create frame within widget, add label and set position of frame
 set f [frame .fr0]
 set f1 [frame .fr1]
 pack $f -fill x -padx 1c -pady 3
-pack $f -fill x -padx 1c -pady 2
-pack [label $f.lab -text "Browse for the retain file to cleanse:"] -side left -anchor w -padx 1
-pack [label $f1.lab -text "Browse for the available retain file to cleanse:"] -side left -anchor w -padx 1 -pady 5
-
-# place input box in widget
-pack [entry $f.ent -width 20 -textvariable fname] -side left -expand yes -fill x -anchor w -padx 2
-pack [entry $f1.ent -width 20 -textvariable f1name] -side left -expand yes -fill x -anchor w -padx 2 -pady 5
+pack $f1 -fill x -padx 1c
+pack [label $f.lab -text "Browse for the retain file to cleanse:" -width 40 -anchor w] -side left -anchor w -padx 1
+pack [label $f1.lab -text "Browse for the available retain file to cleanse:" -width 40 -anchor w] -side left -anchor w -padx 1 -pady 5
 
 # create and place buttons in widget
-pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side left -anchor w -padx 2 -pady 5
-pack [ttk::button $f1.b -text "Browse" -command "fileDialog $f1.ent"] -side left -anchor w -padx 2 -pady 5
+pack [ttk::button $f.b -text "Browse" -command "fileDialog $f.ent"] -side right -anchor w -padx 2 -pady 5
+pack [ttk::button $f1.b -text "Browse" -command "fileDialog $f1.ent"] -side right -anchor w -padx 2 -pady 5
 
+# place input box in widget
+pack [entry $f.ent -width 20 -textvariable fname] -side right -expand yes -fill x -anchor w -padx 2
+pack [entry $f1.ent -width 20 -textvariable f1name] -side right -expand yes -fill x -anchor w -padx 2 -pady 5
 
 # create close button
 set g [frame .g]
 pack $g -fill x -side bottom -anchor s
-pack [label $g.lab -text "Company No.:"] -side left -anchor w -padx 1
-pack [entry $g.ent -width 5 -textvariable company] -side left -anchor s
 pack [ttk::button $g.exit -text "Close" -command {exit}] -side right -anchor s
-pack [ttk::button $g.more -text "More files..." -command "addNewEntries"] -side right -anchor s
 pack [ttk::button $g.all -text "Start cleaning" -command "cleanAll \$fname \$f1name"] -side right -anchor s
 
 # proc to open file dialog box and fill in entry box for file path/name
@@ -72,63 +68,18 @@ proc showMessageBox {level} {
 	}
 }
 
-# core proc to clean file. Pretty messy atm
-proc clean {file mode company} {
-	global frames
-	# check for empty emtry box
-	if {$file eq ""} {
-		showMessageBox 2
-		return
-	}
-	# check for valid file
-	if {[catch {open $file r} fid]} {
-		showMessageBox 3
-		return
-	}
-	
-	# extract file name from path
-	regexp {.*\/([\w\s]+)\.\w+$} $file - filename
-	
-	# open read and write files and debug file
-	set data [open $file r]
-	set newfilename "$filename cleansed"
-	set output [open "$newfilename.txt" w]
-	while {[gets $data line] != -1} {
-		if {[regexp {^-} $line]} {continue}
-		regsub {^[﻿]{0,3}} $line "" line
-		]
-		if {[string trim [lindex $newline 7]] != $company} {
-			if {[string trim [lindex $newline 7]] != "el1"} {continue}
-		}
-		set final [list]
-		set count 0
-		foreach n $newline {
-			set new [string trim $n]
-			if {$count == 5 || $count == 15 || $count == 16 || $count == 47 || $count == 49 || $count == 69 || $count == 80 || $count == 81 || $count == 85} {
-				set new [formatdate $new]
-			}
-			lappend final $new
-			incr count
-		}
-		puts $output [join $final "\t"]
-	}
-	close $output
-	close $data
-	if {$mode} {showMessageBox 1}
-}
-
 proc cleanAll {retainfile availablefile} {
 	if {$retainfile == "" || $availablefile == ""} {
 		showMessageBox 2
 		return
 	}
-	if {[catch {open $retainfile r} fid] || [catch {open $availablefile r} fid]} {
+	if {[catch {open $retainfile r} fid]} {
 		showMessageBox 3
 		return
 	}
-
-	regexp {.*\/([\w\s]+)\.\w+$} $retainfile - rfilename
-	regexp {.*\/([\w\s]+)\.\w+$} $availablefile - afilename
+	
+	regexp {.*\/([\w\s]+\.\w+)$} $retainfile - rfilename
+	regexp {.*\/([\w\s]+\.\w+)$} $availablefile - afilename
 	
 	set rfile [open $rfilename r]
 	set afile [open $afilename r]
@@ -144,21 +95,58 @@ proc cleanAll {retainfile availablefile} {
 	
 	while {[gets $rfile line] != -1} {
 		if {$line == ""} {continue}
-		
-	}
-
-	global fentries company
-	set errors [list "One or more files failed to be cleansed:"]
-	foreach i $fentries {
-		if {![catch {clean $i 0 $company} fid]} {
-			clean $i 0 $company
-		} else {
-			lappend errors "- $i could not be cleaned because $fid."
+		set nline [split $line "\t"]
+		if {[lindex $nline 0] != ""} {break}
+		set hours [lrange $nline 24 49]
+		set pass 0
+		foreach n $hours {
+			if {[string range $n 0 3] eq {Time}} {set pass 1; break}
+			if {$n != 0} {
+				set pass 1
+				break
+			}
+		}
+		if {$pass} {
+			set nline [lreplace $nline 51 51]
+			set nline [lreplace $nline 15 16]
+			set nline [lreplace $nline 0 0]
+			if {[lindex $nline 0] == ""} {
+				set nline [lreplace $nline 0 0 "0"]
+			}
+			set nline [lreplace $nline 6 6 [regsub -all {''} [lindex $nline 6] "'"]]
+			set nline [lreplace $nline 15 15 [regsub -all {^([0-9]+)$} [lindex $nline 15] {'\1}]]
+			puts $output [join $nline "\t"]
 		}
 	}
-	if {[llength $errors] == 1} {
-		showMessageBox 1
-	} else {
-		set button [tk_messageBox -title Warning -message [join $errors "\n"]]
+	
+	while {[gets $afile line] != -1} {
+		if {$line == ""} {continue}
+		set nline [split $line "\t"]
+		if {[lindex $nline 0] != ""} {break}
+		set hours [lrange $nline 18 43]
+		set pass 0
+		foreach n $hours {
+			if {[string range $n 0 3] eq {Avai}} {break}
+			if {$n != 0} {
+				set pass 1
+				break
+			}
+		}
+		if {$pass} {
+			set nline [linsert $nline 18 "" "" "" "" "" "Available"]
+			set nline [lreplace $nline 15 16]
+			set nline [lreplace $nline 0 0]
+			if {[lindex $nline 0] == ""} {
+				set nline [lreplace $nline 0 0 "0"]
+			}
+			set nline [lreplace $nline 6 6 [regsub -all {''} [lindex $nline 6] "'"]]
+			set nline [lreplace $nline 15 15 [regsub -all {^([0-9]+)$} [lindex $nline 15] {'\1}]]
+			puts $output [join $nline "\t"]
+		}
 	}
+	
+	close $output
+	close $afile
+	close $rfile
+	showMessageBox 1
 }
