@@ -1,5 +1,5 @@
-# "." is the name of the current widget o_0
-wm title . "Afrasia recomputation"
+# Set title of widget
+wm title . "Interest recomputation"
 
 # create label of widget named ".msg"
 label .msg -justify left -text "Click on \"Browse\" to select a file name using the file selection dialog for cleansing." -anchor e
