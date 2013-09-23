@@ -114,7 +114,6 @@ proc cleanAll {retainfile availablefile} {
 				set nline [lreplace $nline 0 0 "0"]
 			}
 			set nline [lreplace $nline 6 6 [regsub -all {''} [lindex $nline 6] "'"]]
-			set nline [lreplace $nline 15 15 [regsub -all {^([0-9]+)$} [lindex $nline 15] {'\1}]]
 			puts $output [join $nline "\t"]
 		}
 	}
