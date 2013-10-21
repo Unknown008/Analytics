@@ -183,7 +183,7 @@ proc cleanAll {} {
 	set errors [list "One or more files failed to be cleansed:"]
 	foreach i $fentries {
 		if {![catch {clean $i 0} fid]} {
-			clean $i 0
+			continue
 		} else {
 			lappend errors "- $i could not be cleaned because $fid."
 		}

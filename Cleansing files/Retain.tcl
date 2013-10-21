@@ -101,10 +101,7 @@ proc cleanAll {retainfile availablefile} {
 		set pass 0
 		foreach n $hours {
 			if {[string range $n 0 3] eq {Time}} {set pass 1; break}
-			if {$n != 0} {
-				set pass 1
-				break
-			}
+			if {$n != 0} {set pass 1; break}
 		}
 		if {$pass} {
 			set nline [lreplace $nline 51 51]
@@ -126,10 +123,7 @@ proc cleanAll {retainfile availablefile} {
 		set pass 0
 		foreach n $hours {
 			if {[string range $n 0 3] eq {Avai}} {break}
-			if {$n != 0} {
-				set pass 1
-				break
-			}
+			if {$n != 0} {set pass 1; break}
 		}
 		if {$pass} {
 			set nline [linsert $nline 18 "" "" "" "" "" "Available"]
