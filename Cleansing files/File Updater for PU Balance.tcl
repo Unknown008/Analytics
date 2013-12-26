@@ -30,71 +30,71 @@ pack [ttk::button $g.all -text "Start the magic" -command "cleanAll \$fname \$f1
 
 # proc to open file dialog box and fill in entry box for file path/name
 proc fileDialog {ent} {
-	global fentries
-	# main file types we'll use
-	set types {
-		{"Text files"		.txt}
-		{"CSV files"		.csv}
-		{"Web files"		{.html .htm .xml}}
-		{"All files"		*}
-	}
-	
-	# not sure what this one does
-	global selected_type
-	if {![info exists selected_type]} {
-		set selected_type "Tcl Scripts"
-	}
-	
-	# file dialog command
-	set file [tk_getOpenFile -filetypes $types -typevariable selected_type]
-	
-	# enter file path into entry box. Don't understand this one completely yet
-	if {[string compare $file ""]} {
-		$ent delete 0 end
-		$ent insert 0 $file
-		$ent xview end
-	}
-	
-	#creates an error without this one earlier on. Not sure if still applicable. To test
-	unset file
+  global fentries
+  # main file types we'll use
+  set types {
+    {"Text files"   .txt}
+    {"CSV files"    .csv}
+    {"Web files"    {.html .htm .xml}}
+    {"All files"    *}
+  }
+  
+  # not sure what this one does
+  global selected_type
+  if {![info exists selected_type]} {
+    set selected_type "Tcl Scripts"
+  }
+  
+  # file dialog command
+  set file [tk_getOpenFile -filetypes $types -typevariable selected_type]
+  
+  # enter file path into entry box. Don't understand this one completely yet
+  if {[string compare $file ""]} {
+    $ent delete 0 end
+    $ent insert 0 $file
+    $ent xview end
+  }
+  
+  #creates an error without this one earlier on. Not sure if still applicable. To test
+  unset file
 }
 
 # message box alerts
 proc showMessageBox {level} {
-	switch $level {
-		1 {set button [tk_messageBox -title Complete -message "Operation complete!"]}
-		2 {set button [tk_messageBox -title Warning -message "No file was selected!"]}
-		3 {set button [tk_messageBox -title Warning -message "File name invalid!"]}
-		4 {set button [tk_messageBox -title Bug -message "All right here..."]}
-		default {}
-	}
+  switch $level {
+    1 {set button [tk_messageBox -title Complete -message "Operation complete!"]}
+    2 {set button [tk_messageBox -title Warning -message "No file was selected!"]}
+    3 {set button [tk_messageBox -title Warning -message "File name invalid!"]}
+    4 {set button [tk_messageBox -title Bug -message "All right here..."]}
+    default {}
+  }
 }
 
 proc cleanAll {orig pufile} {
   global moveid
   
   # Check if entry boxes empty
-	if {$orig == "" || $pufile == ""} {
-		showMessageBox 2
-		return
-	}
+  if {$orig == "" || $pufile == ""} {
+    showMessageBox 2
+    return
+  }
   
   # Check any errors in opening files
-	if {[catch {set ofile [open $orig r]} fid1] || [catch {set pfile [open $pufile r]} fid2]} {
-		showMessageBox 3
-		return
-	}
+  if {[catch {set ofile [open $orig r]} fid1] || [catch {set pfile [open $pufile r]} fid2]} {
+    showMessageBox 3
+    return
+  }
   # Close this file for the time being
-	close $ofile
+  close $ofile
   
   # Extract file name
-	regexp {.*\/([\w\s]+)\.\w+$} $orig - filename
-	
+  regexp {.*\/([\w\s]+)\.\w+$} $orig - filename
+  
   # Open output file, and append "_updated"
-	set output [open "${filename}_updated.txt" w]
-	
+  set output [open "${filename}_updated.txt" w]
+  
   # Read line by line
-	while {[gets $pfile line] != -1} {
+  while {[gets $pfile line] != -1} {
     # Get Pokemon ID
     set pid [lindex [split $line ":"] 0]
     
@@ -128,8 +128,8 @@ proc cleanAll {orig pufile} {
     # Merge moves and write to updated file
     set finalmoves [concat $moveset $newmoves]
     puts $output "$pid:[join $finalmoves " "]"
-	}
-	close $output
-	close $pfile
-	showMessageBox 1
+  }
+  close $output
+  close $pfile
+  showMessageBox 1
 }
