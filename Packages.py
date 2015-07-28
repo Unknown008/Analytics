@@ -50,8 +50,10 @@ def sum_amount(startdate, enddate):
 			else:
 				pId += 1
 		else:
-			if any(len(d)==1 for d in daysList[id:id+dur]):
-				s = 
+			test = [len(d) for d in daysList[id:id+dur]]
+			if 1 in test:
+				s = test.index(1)+id
+				continue
 			daysList[id:id+dur] = curPackage
 			costList[id:id+dur] = [cost]
 			print daysList
